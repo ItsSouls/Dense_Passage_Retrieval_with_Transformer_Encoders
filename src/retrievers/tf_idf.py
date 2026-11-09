@@ -16,27 +16,41 @@ class TFIDF(Retriever):
 
     def PreprocessText(self, text: str) -> list[str]:
         """
-        Remove unwanted charatcters from text and lowercase
+        Remove unwanted characters from text and lowercase
         """
-        raise NotImplementedError()
+        text = text.lower() 
+        # preserve letters, numbers, whitespace; replace all punctuation or special characters with whitespace
+        text = "".join(c if c.isalnum() or c.isspace() else " " for c in text)
+        words = text.split()
+        return words
         
     def GetQueryVocabulary(self, query: str) -> list[str]:
         """
         Returns all unique words in a query
         """
-        raise NotImplementedError()
+        words = self.PreprocessText(query)
+        # use set to get unique words, then convert back to list as original function declaration
+        # order may lost 
+        query_unique_words = list(set(words)) 
+        return query_unique_words
 
     def GetDocumentVocabulary(self, document: Document) -> list[str]:
         """
         Returns all unique words in a document
         """
-        raise NotImplementedError()
+        # document data type is predefined in data_utils/document.py
+        doc = document.GetText()
+        words = self.PreprocessText(doc)
+        # use set to get unique words, order may be lost 
+        doc_unique_words = list(set(words))
+        return doc_unique_words
     
     def GetCorpusVocabulary(self) -> set[str]:
         """
         Returns all unique words in ALL documents.
         """
         # Use map function for more efficient processing
+        # predefined from original repo 
         processed_texts = map(lambda doc: set(self.PreprocessText(doc.GetText())), self.index.GetDocuments())
         corpus_vocabulary = set().union(*processed_texts)
         return corpus_vocabulary
@@ -45,25 +59,45 @@ class TFIDF(Retriever):
         """
         Returns a dict with terms and counts of how many documents the term occurs in (counted once per document).
         """
-        raise NotImplementedError()
-       
+        # n_qi
+        doc_frequencies = {}
+        for document in self.index.GetDocuments():
+            unique_terms = self.GetDocumentVocabulary(document)
+            for term in unique_terms:
+                if term not in doc_frequencies:
+                    doc_frequencies[term] = 0 
+                doc_frequencies[term] +=1
+        return doc_frequencies       
     
     def GetInverseDocumentFrequencies(self) -> dict[str, float]:
         """
         Returns a dict with terms and their corresponding inverse document frequencies.
         """
-        raise NotImplementedError()
+        doc_frequencies = self.GetDocumentFrequencies()
+        n_documents = len(self.index.GetDocuments())
+
+        # IDF measures how rare a term is across the corpus in a sensible scale 
+        idf = {}
+        for term, freq in doc_frequencies.items(): 
+            idf[term] = np.log(n_documents / freq)
+        return idf
     
     
     def GetDocumentTermCounts(self, document: Document):
         """
         Returns a dict on the form {term: num_occurences} for an input Document.
         """
-        raise NotImplementedError()
+        f_ij = {}
+        words = self.PreprocessText(document.GetText())
+        for word in words:
+            if word not in f_ij:
+                f_ij[word] = 0
+            f_ij[word] += 1
+        return f_ij
 
     def GetDocumentsTFIDFVectors(self):
         """
-        Returns a n_documents x n_terms matrix whose element (i, j) is the td-idf score of the j'th term in the i'th document.
+        Returns a n_documents x n_terms matrix whose element (i, j) is the tf-idf score of the j'th term in the i'th document.
         """
         # Create a mapping from terms to indices
         self.term_to_index = {term: idx for idx, term in enumerate(self.corpus_vocabulary)}
@@ -74,8 +108,17 @@ class TFIDF(Retriever):
         tfidf_matrix = lil_matrix((n_documents, n_terms), dtype=np.float32)
 
         # TODO: Add tf-idf code
-        
-        return tfidf_matrix.tocsr()   # Convert to CSR format for efficient row slicing
+        for i, document in enumerate(self.index.GetDocuments()):
+            term_counts = self.GetDocumentTermCounts(document)  
+            max_term_count = max(term_counts.values()) if term_counts else 1
+
+            for term, count in term_counts.items():
+                tf = count / max_term_count 
+                idf = self.idf[term] 
+                tfidf = tf * idf
+                tfidf_matrix[i, self.term_to_index[term]] = tfidf
+
+        return tfidf_matrix.tocsr()
     
     def QueryToVector(self, queries: list[str]):
         """ Converts a query or batch of queries into a sparse vector matching the vocab size with counts of how many times the term occurs.
@@ -89,10 +132,19 @@ class TFIDF(Retriever):
         query_vector = lil_matrix((len(queries), len(self.corpus_vocabulary)), dtype=np.float32)
 
         # TODO: add code
+        for i, query in enumerate(queries):
+            term_counts = {}
+            words = self.PreprocessText(query) 
+            for word in words: 
+                if word in self.term_to_index: 
+                    if word not in term_counts: 
+                        term_counts[word] = 0 
+                    term_counts[word] += 1 
 
+            for term, count in term_counts.items():
+                query_vector[i, self.term_to_index[term]] = count
         return query_vector.tocsr()
 
-    #@time_func
     def CalculateScores(self, queries: list[str]):
         """Calculate scores for a query
         
@@ -109,4 +161,12 @@ class TFIDF(Retriever):
         query_vectors = self.QueryToVector(queries) # n_queries x vocab size
         scores = query_vectors.dot(self.tfidf_matrix.T).toarray() # n_queries x n_documents
         return scores
-    
+
+    # pure algebra 
+    # def score(query, document):
+    #     total = 0
+    #     for word in query_words:
+    #         total += tf(word, document) * idf[word]
+    #     return total
+
+    # scores = [score(query, d) for d in documents]
