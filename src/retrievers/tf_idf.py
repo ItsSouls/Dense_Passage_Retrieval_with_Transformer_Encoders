@@ -21,14 +21,16 @@ class TFIDF(Retriever):
         text = text.lower() 
         # preserve letters, numbers, whitespace; replace all punctuation or special characters with whitespace
         text = "".join(c if c.isalnum() or c.isspace() else " " for c in text)
-        bag_of_words = text.split()
-        return bag_of_words
+        words = text.split()
+        return words
         
     def GetQueryVocabulary(self, query: str) -> list[str]:
         """
         Returns all unique words in a query
         """
         words = self.PreprocessText(query)
+        # use set to get unique words, then convert back to list as original function declaration
+        # order may lost 
         query_unique_words = list(set(words)) 
         return query_unique_words
 
@@ -36,8 +38,10 @@ class TFIDF(Retriever):
         """
         Returns all unique words in a document
         """
+        # document data type is predefined in data_utils/document.py
         doc = document.GetText()
         words = self.PreprocessText(doc)
+        # use set to get unique words, order may be lost 
         doc_unique_words = list(set(words))
         return doc_unique_words
     
@@ -46,7 +50,7 @@ class TFIDF(Retriever):
         Returns all unique words in ALL documents.
         """
         # Use map function for more efficient processing
-        # ready from original repo 
+        # predefined from original repo 
         processed_texts = map(lambda doc: set(self.PreprocessText(doc.GetText())), self.index.GetDocuments())
         corpus_vocabulary = set().union(*processed_texts)
         return corpus_vocabulary
@@ -55,6 +59,7 @@ class TFIDF(Retriever):
         """
         Returns a dict with terms and counts of how many documents the term occurs in (counted once per document).
         """
+        # n_qi
         doc_frequencies = {}
         for document in self.index.GetDocuments():
             unique_terms = self.GetDocumentVocabulary(document)
@@ -70,6 +75,8 @@ class TFIDF(Retriever):
         """
         doc_frequencies = self.GetDocumentFrequencies()
         n_documents = len(self.index.GetDocuments())
+
+        # IDF measures how rare a term is across the corpus in a sensible scale 
         idf = {}
         for term, freq in doc_frequencies.items(): 
             idf[term] = np.log(n_documents / freq)
@@ -80,13 +87,13 @@ class TFIDF(Retriever):
         """
         Returns a dict on the form {term: num_occurences} for an input Document.
         """
-        tf = {}
+        f_ij = {}
         words = self.PreprocessText(document.GetText())
         for word in words:
-            if word not in tf:
-                tf[word] = 0
-            tf[word] += 1
-        return tf
+            if word not in f_ij:
+                f_ij[word] = 0
+            f_ij[word] += 1
+        return f_ij
 
     def GetDocumentsTFIDFVectors(self):
         """
@@ -138,7 +145,6 @@ class TFIDF(Retriever):
                 query_vector[i, self.term_to_index[term]] = count
         return query_vector.tocsr()
 
-    #@time_func
     def CalculateScores(self, queries: list[str]):
         """Calculate scores for a query
         
@@ -155,4 +161,12 @@ class TFIDF(Retriever):
         query_vectors = self.QueryToVector(queries) # n_queries x vocab size
         scores = query_vectors.dot(self.tfidf_matrix.T).toarray() # n_queries x n_documents
         return scores
-    
+
+    # pure algebra 
+    # def score(query, document):
+    #     total = 0
+    #     for word in query_words:
+    #         total += tf(word, document) * idf[word]
+    #     return total
+
+    # scores = [score(query, d) for d in documents]
