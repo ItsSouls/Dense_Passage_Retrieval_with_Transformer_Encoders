@@ -40,13 +40,17 @@ def main(cfg):
     tfidf_test_relevancies = retrieveQueryAndGetRelevancies(tf_idf, test_queries, k=cfg.top_k)
 
     ### Evaluate
-    train_scores = Evaluate(tfidf_train_relevancies, train_queries)
-    val_scores = Evaluate(tfidf_val_relevancies, val_queries)
-    test_scores = Evaluate(tfidf_test_relevancies, test_queries)
+    
+    train_scores = Evaluate(tfidf_train_relevancies, train_queries, cfg.top_k)
+    val_scores = Evaluate(tfidf_val_relevancies, val_queries, cfg.top_k)
+    test_scores = Evaluate(tfidf_test_relevancies, test_queries, cfg.top_k)
 
-    print(f'Train results: {train_scores}')
-    print(f'Val results: {val_scores}')
-    print(f'Test results: {test_scores}')
+    ### Print results
+    print(f'\nResults @ k={cfg.top_k}')
+    print(f'{"Split":<8}{"P@k":>10}{"R@k":>10}{"R@k std":>10}{"MRR":>10}')
+    for split, scores in [('Train', train_scores), ('Val', val_scores), ('Test', test_scores)]:
+        print(f'{split:<8}{scores["precision"]:>10.4f}{scores["recall"]:>10.4f}'
+              f'{scores["recall_standard"]:>10.4f}{scores["mrr"]:>10.4f}')
 
 if __name__ == '__main__':
     main()
