@@ -1,6 +1,7 @@
 import hydra
 from src.data_utils.corpus import Corpus
 from src.retrievers.tf_idf import TFIDF
+from src.retrievers.bm25 import BM25
 from src.data_utils.query import Query
 from src.retrievers.utils import retrieveQueryAndGetRelevancies
 from src.evaluation.metrics import Evaluate
@@ -32,18 +33,28 @@ def main(cfg):
                     ]
     
     ### Initialize TF-IDF class
-    tf_idf = TFIDF(documents=corpus.all_documents)
+    method = cfg.retriever.method
+
+    if method == "tf_idf":
+     retriever = TFIDF(documents=corpus.all_documents)
+    elif method == "bm25":
+     retriever = BM25(documents=corpus.all_documents, k1=cfg.retriever.k1, b=cfg.retriever.b)
+    elif method == "dpr":
+        raise NotImplementedError("DPR not ready yet")
+    else:
+        raise ValueError(f"Unknown retriever: {method}")
     
-    ### Retrieve top-k relevant queries
-    tfidf_train_relevancies = retrieveQueryAndGetRelevancies(tf_idf, train_queries, k=cfg.top_k)
-    tfidf_val_relevancies = retrieveQueryAndGetRelevancies(tf_idf, val_queries, k=cfg.top_k)
-    tfidf_test_relevancies = retrieveQueryAndGetRelevancies(tf_idf, test_queries, k=cfg.top_k)
+   
+    ### Retrieve top-k relevant documents
+    train_relevancies = retrieveQueryAndGetRelevancies(retriever, train_queries, k=cfg.top_k)
+    val_relevancies = retrieveQueryAndGetRelevancies(retriever, val_queries, k=cfg.top_k)
+    test_relevancies = retrieveQueryAndGetRelevancies(retriever, test_queries, k=cfg.top_k)
 
     ### Evaluate
     
-    train_scores = Evaluate(tfidf_train_relevancies, train_queries, cfg.top_k)
-    val_scores = Evaluate(tfidf_val_relevancies, val_queries, cfg.top_k)
-    test_scores = Evaluate(tfidf_test_relevancies, test_queries, cfg.top_k)
+    train_scores = Evaluate(train_relevancies, train_queries, cfg.top_k)
+    val_scores = Evaluate(val_relevancies, val_queries, cfg.top_k)
+    test_scores = Evaluate(test_relevancies, test_queries, cfg.top_k)
 
     ### Print results
     print(f'\nResults @ k={cfg.top_k}')
