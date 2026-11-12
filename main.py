@@ -46,22 +46,28 @@ def main(cfg):
     
    
     ### Retrieve top-k relevant documents
-    train_relevancies = retrieveQueryAndGetRelevancies(retriever, train_queries, k=cfg.top_k)
-    val_relevancies = retrieveQueryAndGetRelevancies(retriever, val_queries, k=cfg.top_k)
-    test_relevancies = retrieveQueryAndGetRelevancies(retriever, test_queries, k=cfg.top_k)
+    max_k = max(cfg.k_values)  
+    train_relevancies = retrieveQueryAndGetRelevancies(retriever, train_queries, k=max_k)
+    val_relevancies = retrieveQueryAndGetRelevancies(retriever, val_queries, k=max_k)
+    test_relevancies = retrieveQueryAndGetRelevancies(retriever, test_queries, k=max_k)
+    
 
     ### Evaluate
     
-    train_scores = Evaluate(train_relevancies, train_queries, cfg.top_k)
-    val_scores = Evaluate(val_relevancies, val_queries, cfg.top_k)
-    test_scores = Evaluate(test_relevancies, test_queries, cfg.top_k)
+    for k in cfg.k_values:
+        train_cut = [r[:k] for r in train_relevancies]
+        val_cut = [r[:k] for r in val_relevancies]
+        test_cut = [r[:k] for r in test_relevancies]
 
-    ### Print results
-    print(f'\nResults @ k={cfg.top_k}')
-    print(f'{"Split":<8}{"P@k":>10}{"R@k":>10}{"R@k std":>10}{"MRR":>10}')
-    for split, scores in [('Train', train_scores), ('Val', val_scores), ('Test', test_scores)]:
-        print(f'{split:<8}{scores["precision"]:>10.4f}{scores["recall"]:>10.4f}'
-              f'{scores["recall_standard"]:>10.4f}{scores["mrr"]:>10.4f}')
+        train_scores = Evaluate(train_cut, train_queries, k)
+        val_scores = Evaluate(val_cut, val_queries, k)
+        test_scores = Evaluate(test_cut, test_queries, k)
+
+        print(f'\nResults for {method} @ k={k}')
+        print(f'{"Split":<8}{"P@k":>10}{"R@k":>10}{"R@k std":>10}{"MRR":>10}')
+        for split, scores in [('Train', train_scores), ('Val', val_scores), ('Test', test_scores)]:
+            print(f'{split:<8}{scores["precision"]:>10.4f}{scores["recall"]:>10.4f}'
+                  f'{scores["recall_standard"]:>10.4f}{scores["mrr"]:>10.4f}')
 
 if __name__ == '__main__':
     main()
