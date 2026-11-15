@@ -7,6 +7,7 @@ defaults:
 device: cpu
 base_path: "."
 top_k: 10
+k_values: [1, 5, 10, 20]
 
 # Keep Hydra in the current directory to ensure relative paths are correct
 hydra:
