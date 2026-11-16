@@ -100,8 +100,8 @@ class Trainer:
             history.append(aux)
             print(f"Epoch {epoch + 1} /{self.epochs} | train_loss {mean_loss} | {metrics}")
 
-            if metrics["val_loss"] < best_val_loss:      # ¿la val_loss de esta época es menor que la mejor?
-                best_val_loss = metrics["val_loss"]    # actualiza la mejor
-                self.save(best_path)             # guarda los pesos en la ruta que preparaste
+            if metrics["val_loss"] < best_val_loss:      
+                best_val_loss = metrics["val_loss"]    
+                self.save(best_path)             
 
         return history
