@@ -5,6 +5,7 @@ import torch.nn as nn
 class DPRLoss(nn.Module):
     def __init__(self):
         super().__init__()
+        self.cross_entropy = nn.CrossEntropyLoss()
     
     def forward(self, queries: torch.tensor, documents: torch.tensor):
         """
@@ -15,4 +16,7 @@ class DPRLoss(nn.Module):
 
         Returns: A 1d torch tensor 
         """
-        raise NotImplementedError()
+        scores = queries @ documents.T
+        labels = torch.arange(queries.size(dim=0), device=queries.device)
+        loss = self.cross_entropy(scores, labels)
+        return loss
