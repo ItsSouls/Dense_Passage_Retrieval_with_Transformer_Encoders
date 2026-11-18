@@ -4,3 +4,9 @@ hidden_dim: 32
 n_heads: 4
 n_layers: 6
 feed_forward_dim: 768
+tokenizer_name: 'bert-base-uncased'
+max_query_length: 64  # Max tokens per query
+max_document_length: 256  # Max tokens per document
+dropout: 0.1  # Dropout probability
+query_encoder_weights_path: null
+document_encoder_weights_path: null
