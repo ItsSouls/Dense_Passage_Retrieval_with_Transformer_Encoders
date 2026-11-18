@@ -1,0 +1,21 @@
+defaults:
+  - _self_  # Hydra magic
+  - dataset: fiqa
+  - model: encoder
+
+
+device: mps
+base_path: "."
+
+training:
+    seed: 42
+    batch_size: 32
+    lr: 1.0e-4
+    epochs: 10
+    warmup_steps: 80
+    grad_clip: 1.0
+    save_dir: "outputs/train/weights"
+
+hydra:
+  run:
+    dir: "outputs/train/"  
