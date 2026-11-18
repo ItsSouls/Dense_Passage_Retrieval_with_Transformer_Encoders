@@ -19,6 +19,10 @@ class Corpus:
             shutil.rmtree(f'{base_dir}/raw')
         else:
             self.ds = load_from_disk(f'{base_dir}/{self.dataset_name}')
+            # Added snippet to cache and stopping it from raising attribute error
+            self.relevant_ids = {}
+            for split in self.ds.values():
+                self.relevant_ids.update(zip(split['query_id'], split['document_id']))
 
 
     @property
@@ -95,4 +99,3 @@ class Corpus:
             self.ds[key] = self.ds[key].add_column('document_id', document_ids)
 
         return relevant_document_ids
-            
