@@ -15,6 +15,7 @@ training:
     warmup_steps: 80
     grad_clip: 1.0
     save_dir: "outputs/train/weights"
+    recall_k: 10
 
 hydra:
   run:

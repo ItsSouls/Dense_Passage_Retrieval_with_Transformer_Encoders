@@ -51,3 +51,21 @@ class DenseRetriever(Retriever):
         query_embeddings = self._encode(queries, self.query_encoder, self.max_query_length)
         scores = query_embeddings @ self.doc_embeddings.T
         return scores.cpu().numpy()
+
+def make_recall_val_fn(documents, queries, tokenizer, device, k=10):
+    def val_fn(query_encoder, document_encoder):
+        # 1. Indexar el corpus con los encoders ACTUALES
+        retriever = DenseRetriever(documents, query_encoder, document_encoder, tokenizer, device)
+
+        # 2. Top-k de cada query y cuáles son relevantes
+        relevancies = retrieveQueryAndGetRelevancies(retriever, queries, k)
+
+        # 3. Métricas
+        scores = Evaluate(relevancies, queries, k)
+
+        return {
+            f"recall@{k}": scores["recall"],
+            f"mrr@{k}":  scores["mrr"]
+        }
+
+    return val_fn

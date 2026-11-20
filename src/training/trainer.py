@@ -5,7 +5,7 @@ from src.training.loss import DPRLoss
 
 class Trainer:
     def __init__(self, query_encoder, document_encoder, train_loader, val_loader,
-                 device, lr, epochs, save_dir, grad_clip=1.0, warmup_steps=100, val_fn=None):
+                 device, lr, epochs, save_dir, grad_clip=1.0, warmup_steps=100, val_fn=None, select_metric = "val_loss"):
         self.criterion = DPRLoss()                                 
         self.query_encoder = query_encoder.to(device)
         self.document_encoder = document_encoder.to(device)
@@ -20,6 +20,7 @@ class Trainer:
         self.val_fn = val_fn
         self.optimizer = torch.optim.AdamW(list(query_encoder.parameters()) + list(document_encoder.parameters()), lr = self.lr)
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda= lambda paso: min(1, (paso + 1)/self.warmup_steps))
+        self.select_metric = select_metric
 
     def _encode_batch(self, batch):
         q_ids = batch["q_input_ids"].to(self.device)
@@ -90,7 +91,8 @@ class Trainer:
         os.makedirs(self.save_dir, exist_ok=True)
         best_path = os.path.join(self.save_dir, "best_encoders.pt")
 
-        best_val_loss = float("inf")
+        higher_is_better = self.select_metric != "val_loss"
+        best_score = float("-inf") if (higher_is_better) else float("inf")
 
         for epoch in range(self.epochs):
             mean_loss = self.train_epoch()
@@ -100,8 +102,16 @@ class Trainer:
             history.append(aux)
             print(f"Epoch {epoch + 1} /{self.epochs} | train_loss {mean_loss} | {metrics}")
 
-            if metrics["val_loss"] < best_val_loss:      
-                best_val_loss = metrics["val_loss"]    
+            score = metrics[self.select_metric]
+
+            if higher_is_better:
+                improved = score > best_score    
+            else:  
+                improved = score < best_score   
+
+            if improved:
+                print(f"  -> new best {self.select_metric}: {score:.4f} (saved)")
+                best_score = score
                 self.save(best_path)             
 
         return history
