@@ -24,13 +24,14 @@ class DPR:
         )
     
     def __load_models(self):
+        # Two encoders with the same config but separate weights
         self.query_encoder = self.__build_encoder()
         self.document_encoder = self.__build_encoder()
         
-        query_weights_path = self.cfg.model.get('query_encoder_weights_path', None)
-        if query_weights_path:
-            self.query_encoder.load_state_dict(torch.load(query_weights_path, map_location="cpu"))
-
-        document_weights_path = self.cfg.model.get('document_encoder_weights_path', None)
-        if document_weights_path:
-            self.document_encoder.load_state_dict(torch.load(document_weights_path, map_location="cpu"))
+        # Load trained weights if a path is given in the config (otherwise keep random weights)
+        # Trainer.save writes both encoders in one file, under the keys 'query_encoder' and 'document_encoder'
+        weights_path = self.cfg.model.get('encoders_weights_path', None)
+        if weights_path:
+            checkpoint = torch.load(weights_path, map_location="cpu")
+            self.query_encoder.load_state_dict(checkpoint["query_encoder"])
+            self.document_encoder.load_state_dict(checkpoint["document_encoder"])

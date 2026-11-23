@@ -45,7 +45,6 @@ class PairCollator:
         q_tokens = self.tokenizer(questions, padding=True, truncation=True,
                                   max_length=self.max_query_length, return_tensors="pt")
         d_tokens = self.tokenizer(documents, padding = True, truncation = True, max_length=self.max_document_length, return_tensors = 'pt')
-            # Qué significa pt?
 
         return {
             "q_input_ids": q_tokens["input_ids"],
