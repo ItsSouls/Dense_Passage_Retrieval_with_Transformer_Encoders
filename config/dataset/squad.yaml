@@ -1,1 +1,2 @@
 name: 'squad'
+eval_splits: [validation, test]  # no need to train (too big dataset)

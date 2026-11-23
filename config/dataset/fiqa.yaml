@@ -1,1 +1,2 @@
 name: 'fiqa'
+eval_splits: [train, validation, test]
