@@ -2,6 +2,8 @@ import hydra
 from src.data_utils.corpus import Corpus
 from src.retrievers.tf_idf import TFIDF
 from src.retrievers.bm25 import BM25
+from src.retrievers.dpr import DPR
+from src.retrievers.dense_retriever import DenseRetriever
 from src.data_utils.query import Query
 from src.retrievers.utils import retrieveQueryAndGetRelevancies
 from src.evaluation.metrics import Evaluate
@@ -36,11 +38,25 @@ def main(cfg):
     method = cfg.retriever.method
 
     if method == "tf_idf":
-     retriever = TFIDF(documents=corpus.all_documents)
+        retriever = TFIDF(documents=corpus.all_documents)
     elif method == "bm25":
-     retriever = BM25(documents=corpus.all_documents, k1=cfg.retriever.k1, b=cfg.retriever.b)
+        retriever = BM25(documents=corpus.all_documents, k1=cfg.retriever.k1, b=cfg.retriever.b)
     elif method == "dpr":
-        raise NotImplementedError("DPR not ready yet")
+        dpr = DPR(cfg)
+        # TEMPORARY until T03 is merged - do not commit
+        import torch
+        state = torch.load("outputs/train/weights/best_encoders.pt", map_location="cpu")
+        dpr.query_encoder.load_state_dict(state["query_encoder"])
+        dpr.document_encoder.load_state_dict(state["document_encoder"])
+        retriever = DenseRetriever(
+            documents=corpus.all_documents,
+            query_encoder=dpr.query_encoder,
+            document_encoder=dpr.document_encoder,
+            tokenizer=dpr.tokenizer,
+            device=cfg.device,
+            max_query_length=cfg.model.max_query_length,
+            max_doc_length=cfg.model.max_document_length,
+        )
     else:
         raise ValueError(f"Unknown retriever: {method}")
     
