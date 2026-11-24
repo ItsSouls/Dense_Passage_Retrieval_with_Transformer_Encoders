@@ -1,0 +1,17 @@
+defaults:
+  - _self_  
+  - dataset: fiqa
+  - retriever: tf_idf
+
+
+device: cpu
+base_path: "."
+top_k: 10
+k_values: [1, 5, 10, 20]
+
+hydra:
+  run:
+    dir: "outputs/eval/${dataset.name}/${retriever.method}"  # One directory per dataset and method
+  sweep:  
+    dir: "outputs/eval"
+    subdir: "${dataset.name}/${retriever.method}"
