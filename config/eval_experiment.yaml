@@ -1,0 +1,19 @@
+defaults:
+  - _self_  # Hydra magic
+  - dataset: fiqa
+  - retriever: tf_idf
+  - model: encoder
+
+
+device: cpu
+base_path: "."
+top_k: 10
+k_values: [1, 5, 10, 20]
+
+# Keep Hydra in the current directory to ensure relative paths are correct
+hydra:
+  run:
+     dir: "outputs/eval/${dataset.name}/${retriever.method}"  # One folder per dataset and method
+  sweep:    
+    dir: "outputs/eval"
+    subdir: "${dataset.name}/${retriever.method}"
