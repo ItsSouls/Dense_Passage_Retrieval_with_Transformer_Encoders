@@ -20,7 +20,7 @@ def buildQueries(split, relevant_ids):
             for question, query_id in zip(questions, query_ids)]
 
 
-@hydra.main(config_path='config', config_name='fiqa_experiment.yaml', version_base=None)
+@hydra.main(config_path='config', config_name='eval_experiment.yaml', version_base=None)
 def main(cfg):
     ### Load a dataset
     corpus = Corpus(dataset_name=cfg.dataset.name, base_dir=f'{cfg.base_path}/retrieval_data')
@@ -41,11 +41,6 @@ def main(cfg):
         retriever = BM25(documents=corpus.all_documents, k1=cfg.retriever.k1, b=cfg.retriever.b)
     elif method == "dpr":
         dpr = DPR(cfg)
-        # TEMPORARY until T03 is merged - do not commit
-        import torch
-        state = torch.load("outputs/train/weights/best_encoders.pt", map_location="cpu")
-        dpr.query_encoder.load_state_dict(state["query_encoder"])
-        dpr.document_encoder.load_state_dict(state["document_encoder"])
         retriever = DenseRetriever(
             documents=corpus.all_documents,
             query_encoder=dpr.query_encoder,
