@@ -1,6 +1,8 @@
 from src.retrievers.models.encoder import TransformerEncoder
 from transformers import AutoTokenizer
 import torch
+from src.retrievers.models.encoder import TransformerEncoder
+from src.retrievers.models.pretrained_encoder import PretrainedEncoder
 
 
 class DPR:
@@ -10,16 +12,24 @@ class DPR:
         self.__load_models()
 
     def __build_encoder(self):
-        # Create one TransformerEncoder from the model config (random initial weights)
+        # Pretrained encoder (e.g. BERT) if the model config says so
+        if self.cfg.model.get("type", "scratch") == "pretrained":
+            return PretrainedEncoder(
+                pretrained_name=self.cfg.model.pretrained_name,
+                pooling_type=self.cfg.model.pooling_type,
+                attn_implementation=self.cfg.model.get("attn_implementation", "sdpa"),
+            )
+
+        # Otherwise: our TransformerEncoder from scratch (random initial weights)
         return TransformerEncoder(
-            n_layers=self.cfg.model.n_layers,  
-            n_heads= self.cfg.model.n_heads,
-            emb_dim= self.cfg.model.emb_dim,
-            hidden_dim= self.cfg.model.hidden_dim,
-            feed_forward_dim= self.cfg.model.feed_forward_dim,
+            n_layers=self.cfg.model.n_layers,
+            n_heads=self.cfg.model.n_heads,
+            emb_dim=self.cfg.model.emb_dim,
+            hidden_dim=self.cfg.model.hidden_dim,
+            feed_forward_dim=self.cfg.model.feed_forward_dim,
             pooling_type=self.cfg.model.pooling_type,
             vocab_size=self.tokenizer.vocab_size,
-            max_length=max(self.cfg.model.max_query_length, self.cfg.model.max_document_length),      # long enough for both queries and documents
+            max_length=max(self.cfg.model.max_query_length, self.cfg.model.max_document_length),
             dropout=self.cfg.model.dropout,
         )
     

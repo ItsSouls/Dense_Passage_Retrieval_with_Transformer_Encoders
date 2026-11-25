@@ -1,0 +1,8 @@
+pooling_type: 'mean' # mean | cls
+tokenizer_name: 'bert-base-uncased'
+type: 'pretrained'                    
+pretrained_name: 'bert-base-uncased'  
+max_query_length: 64  # Max tokens per query
+max_document_length: 256  # Max tokens per document
+encoders_weights_path: null
+attn_implementation: 'sdpa'   # 'eager' only for attention maps (slower, but returns the weights)
