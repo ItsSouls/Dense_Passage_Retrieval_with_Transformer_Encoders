@@ -1,1 +1,2 @@
 name: 'squad'
+eval_splits: ['validation']  # SQuAD has no test split: validation is used as the test set
