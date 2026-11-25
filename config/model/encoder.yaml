@@ -9,3 +9,4 @@ max_query_length: 64  # Max tokens per query
 max_document_length: 256  # Max tokens per document
 dropout: 0.1  # Dropout probability
 encoders_weights_path: null
+type: 'scratch'
