@@ -32,7 +32,7 @@ def main(cfg):
                                          f"Available splits: {list(corpus.ds.keys())}")
         queries[split_name] = buildQueries(corpus.ds[split_name], corpus.relevant_ids)
     
-    ### Initialize TF-IDF class
+  ### Build the retriever
     method = cfg.retriever.method
 
     if method == "tf_idf":

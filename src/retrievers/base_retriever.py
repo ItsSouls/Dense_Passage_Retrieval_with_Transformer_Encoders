@@ -1,5 +1,6 @@
 import os
 import pickle
+import numpy as np
 from abc import ABC, abstractmethod
 from src.data_utils.dataset import DocumentDataset
 
@@ -41,11 +42,18 @@ class Retriever(ABC):
     def CalculateScores(self, query: str):
         raise NotImplementedError("Must overwrite")
     
-    def Lookup(self, queries: list[str], k: int) -> list:
+    def Lookup(self, queries: list[str], k: int, chunk_size: int = 1024) -> list:
         """
         @param queries: The input text(s) to which relevant passages should be found.
         @param k: The number of relevant passages to retrieve for each input query.
+        @param chunk_size: Number of queries scored at once (limits memory use).
+        Returns: for each query, its top-k Documents, from highest to lowest score.
         """
-        scores = self.CalculateScores(queries)
-        ranked_documents = [[d for _, d in sorted(zip(query_scores, self.index.GetDocuments()), key=lambda pair: pair[0], reverse=True)] for query_scores in scores]
-        return [ranked_document[:min(k, len(ranked_documents[0]))] for ranked_document in ranked_documents]
+        documents = self.index.GetDocuments()
+        k = min(k, len(documents))
+        results = []
+        for start in range(0, len(queries), chunk_size):
+            scores = np.asarray(self.CalculateScores(queries[start:start + chunk_size]))   # [chunk, N]
+            top = np.argsort(-scores, axis=1, kind="stable")[:, :k]                         # [chunk, k] indices
+            results.extend([[documents[j] for j in row] for row in top])
+        return results
