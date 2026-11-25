@@ -19,6 +19,9 @@ class PairDataset(Dataset):
         question = row['question']     # the question text
         documents = row['text']                # the list of relevant document texts
 
+        if isinstance(documents, str):   # a single document given as a string (not a list)
+            documents = [documents]
+            
         if self.random_positive:    
             document = random.choice(documents)            # one document chosen at random
         else:
@@ -45,7 +48,6 @@ class PairCollator:
         q_tokens = self.tokenizer(questions, padding=True, truncation=True,
                                   max_length=self.max_query_length, return_tensors="pt")
         d_tokens = self.tokenizer(documents, padding = True, truncation = True, max_length=self.max_document_length, return_tensors = 'pt')
-            # Qué significa pt?
 
         return {
             "q_input_ids": q_tokens["input_ids"],

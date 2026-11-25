@@ -1,2 +1,2 @@
 name: 'fiqa'
-eval_splits: ['train', 'validation', 'test']  # Splits that main.py evaluates, in this order
+eval_splits: [train, validation, test]

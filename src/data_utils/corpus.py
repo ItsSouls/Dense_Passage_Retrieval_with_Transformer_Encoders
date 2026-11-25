@@ -1,4 +1,5 @@
 import os
+import random
 import shutil
 from datasets import Dataset, DatasetDict, load_from_disk
 from src.data_utils.download_retrieval_datasets import get_fiqa_dataset, get_squad_dataset
@@ -39,6 +40,18 @@ class Corpus:
 
     @property
     def all_documents(self):
+        if self.dataset_name == 'squad':
+            # create docs to ensure that squad follows the same data structure as fiqa 
+            docs = {}
+            for split in (self.train, self.val, self.test):
+                if split is None:
+                    continue
+                for texts, ids in zip(split['text'], split['document_id']):
+                    for text, _id in zip(texts, ids):
+                        docs[_id] = text
+            return Dataset.from_dict({'text': [[t] for t in docs.values()],
+                                      'document_id': [[i] for i in docs]})
+
         train_text, train_ids = list(self.train['text']), list(self.train['document_id'])
         val_text, val_ids =     list(self.val['text']), list(self.val['document_id'])
         
@@ -62,6 +75,13 @@ class Corpus:
 
         elif self.dataset_name == 'squad':
             ds = get_squad_dataset(base_dir)
+            # squad has no test split: use validation batch as test, and take a portion from training for validation 
+            titles = sorted(set(ds['train']['title']))
+            random.Random(42).shuffle(titles)
+            val_titles = set(titles[:len(titles) // 10])
+            return {'train': ds['train'].filter(lambda row: row['title'] not in val_titles),
+                    'validation': ds['train'].filter(lambda row: row['title'] in val_titles),
+                    'test': ds['validation']}
 
         return {key: ds[key] for key in ds.keys()}
 
@@ -72,21 +92,31 @@ class Corpus:
         
         for key in self.ds:
             self.ds[key] = self.ds[key].rename_column(column_mapping[self.dataset_name], 'text')
+            if self.dataset_name == 'squad':
+                # ensure same data structure between fiqa and squad
+                self.ds[key] = self.ds[key].map(lambda row: {'text': [row['text']]})
         return self.ds
 
     def __assign_ids(self):
         q_id_counter = 0
         doc_id_counter = 0
         relevant_document_ids = {}
+        text_to_id = {}  
 
         for key in self.ds:
             query_ids = []
             document_ids = []
+            squad_texts = self.ds[key]['text'] if self.dataset_name == 'squad' else None
             for i in range(len(self.ds[key])):
                 query_ids.append(f'q{q_id_counter}')
-                documents = self.ds[key]['text'][i]
+                documents = squad_texts[i] if self.dataset_name == 'squad' else self.ds[key]['text'][i]
                 relevant_ids = []
                 for doc in documents:
+                    if self.dataset_name == 'squad':
+                        if doc not in text_to_id:
+                            text_to_id[doc] = f'doc{len(text_to_id)}'
+                        relevant_ids.append(text_to_id[doc])
+                        continue
                     relevant_ids.append(f'doc{doc_id_counter}')
                     doc_id_counter += 1
                 

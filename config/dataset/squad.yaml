@@ -1,2 +1,2 @@
 name: 'squad'
-eval_splits: ['validation']  # SQuAD has no test split: validation is used as the test set
+eval_splits: [validation, test]  # no need to train (too big dataset)
